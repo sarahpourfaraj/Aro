@@ -3,15 +3,19 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - Ground
+  - Enemy
+  - Chest
+  - PlayerAttack
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - PlayerAttack
   - Water
   - UI
-  - 
+  - Ground
   - 
   - 
   - 
@@ -40,4 +44,16 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: 'Background '
+    uniqueID: 569264367
+    locked: 0
+  - name: Castle
+    uniqueID: 167786135
+    locked: 0
+  - name: Platforms
+    uniqueID: 2210240927
+    locked: 0
+  - name: 'Player  '
+    uniqueID: 3354847997
     locked: 0
