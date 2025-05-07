@@ -1,24 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-
 public class Bandit : MonoBehaviour
 {
-
-    [Header("Swimming")]
-    [SerializeField] private float swimSpeed = 3f;
-    [SerializeField] private float swimJumpForce = 5f;
-    [SerializeField] private bool canSwim = false;
-    private bool isInWater = false;
-    private float originalJumpForce;
-
-    private WaterZone currentWaterZone;
-    private float originalDrag;
-    private float originalAngularDrag;
-    private float originalGravityScale;
-
-
-
     [Header("Movement")]
     [SerializeField] float m_speed = 4.0f;
     [SerializeField] float m_jumpForce = 7.5f;
@@ -30,14 +14,16 @@ public class Bandit : MonoBehaviour
     [SerializeField] private int maxHealth = 2;
     [SerializeField] private GameObject attackHitbox; // Assign in Inspector
 
-    //fall
     [Header("Respawn")]
     [SerializeField] private float deathYLevel = -10f; // Y position where player dies
     private Vector3 spawnPosition;
 
+    [Header("Swimming")]
+    [SerializeField] private bool canSwim = false;
+    private bool isInWater = false;
     private int currentHealth;
 
-    private Animator m_animator;
+    public Animator m_animator;
     private Rigidbody2D m_body2d;
     private Sensor_Bandit m_groundSensor;
     private bool m_grounded = false;
@@ -48,19 +34,17 @@ public class Bandit : MonoBehaviour
     private int enemyHits = 0;
 
     private float originalSpeed;
-
-
+    private float originalGravity;
     void Start()
     {
-        originalJumpForce = m_jumpForce;
         spawnPosition = transform.position;
         originalSpeed = m_speed;
         m_animator = GetComponent<Animator>();
         m_body2d = GetComponent<Rigidbody2D>();
+        originalGravity = m_body2d.gravityScale;
         m_groundSensor = transform.Find("GroundSensor").GetComponent<Sensor_Bandit>();
         m_spawnPosition = transform.position;
         currentHealth = maxHealth;
-
     }
 
     void OnCollisionEnter2D(Collision2D collision)
@@ -92,6 +76,13 @@ public class Bandit : MonoBehaviour
         HandleMovement();
         HandleAnimations();
         HandleInput();
+
+        // Simple water floating effect
+        if (isInWater && !m_grounded)
+        {
+            // Apply gentle up and down movement
+            m_body2d.AddForce(new Vector2(0, Mathf.Sin(Time.time * 2f) * 0.5f));
+        }
     }
 
     public void CheckFallDeath()
@@ -101,6 +92,7 @@ public class Bandit : MonoBehaviour
             Respawn();
         }
     }
+
     void HandleGroundDetection()
     {
         if (!m_grounded && m_groundSensor.State())
@@ -118,12 +110,11 @@ public class Bandit : MonoBehaviour
     void HandleMovement()
     {
         float inputX = Input.GetAxis("Horizontal");
-        float inputY = isInWater ? Input.GetAxis("Vertical") : 0;
 
         if (inputX > 0) transform.localScale = new Vector3(-1.0f, 1.0f, 1.0f);
         else if (inputX < 0) transform.localScale = new Vector3(1.0f, 1.0f, 1.0f);
 
-        m_body2d.velocity = new Vector2(inputX * m_speed, isInWater ? inputY * m_speed : m_body2d.velocity.y);
+        m_body2d.velocity = new Vector2(inputX * m_speed, m_body2d.velocity.y);
         m_animator.SetFloat("AirSpeed", m_body2d.velocity.y);
     }
 
@@ -139,12 +130,11 @@ public class Bandit : MonoBehaviour
 
     void HandleInput()
     {
-        if (Input.GetKeyDown("e")) ToggleDeathState();
-        if (Input.GetKeyDown("q")) m_animator.SetTrigger("Hurt");
-        if (Input.GetMouseButtonDown(0)) CheckAttack();
-        if (Input.GetKeyDown("f")) m_combatIdle = !m_combatIdle;
+        // if (Input.GetKeyDown("e")) ToggleDeathState();
+        // if (Input.GetKeyDown("q")) m_animator.SetTrigger("Hurt");
+        // if (Input.GetMouseButtonDown(0)) CheckAttack();
+        // if (Input.GetKeyDown("f")) m_combatIdle = !m_combatIdle;
 
-        // Only allow jumping if grounded or in water
         if (Input.GetKeyDown("space") && (m_grounded || isInWater))
         {
             Jump();
@@ -156,23 +146,6 @@ public class Bandit : MonoBehaviour
         if (!m_isDead) m_animator.SetTrigger("Death");
         else m_animator.SetTrigger("Recover");
         m_isDead = !m_isDead;
-    }
-
-    void CheckAttack()
-    {
-        m_animator.SetTrigger("Attack");
-
-        // Enable hitbox temporarily
-        if (attackHitbox != null)
-        {
-            attackHitbox.SetActive(true);
-            StartCoroutine(DisableHitbox(0.2f)); // Disable after 0.2 seconds
-        }
-    }
-    IEnumerator DisableHitbox(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        attackHitbox.SetActive(false);
     }
 
     void Jump()
@@ -205,19 +178,9 @@ public class Bandit : MonoBehaviour
         m_animator.SetTrigger("Recover");
         m_isDead = false;
         m_isRespawning = false;
-        currentHealth = maxHealth; // Reset health on respawn
+        currentHealth = maxHealth;
     }
-    public class CollisionDebugger : MonoBehaviour
-    {
-        void OnCollisionEnter2D(Collision2D col)
-        {
-            Debug.Log($"{name} collided with {col.gameObject.name}");
-        }
-        void OnTriggerEnter2D(Collider2D col)
-        {
-            Debug.Log($"{name} triggered by {col.gameObject.name}");
-        }
-    }
+
     public void TakeDamage()
     {
         currentHealth--;
@@ -229,7 +192,6 @@ public class Bandit : MonoBehaviour
         }
     }
 
-    //for red stone
     public void BoostSpeed(float multiplier, float duration)
     {
         m_speed = originalSpeed * multiplier;
@@ -240,69 +202,28 @@ public class Bandit : MonoBehaviour
     {
         m_speed = originalSpeed;
     }
-    public void EnableSwimming()
-    {
-        canSwim = true;
-    }
 
-    public bool CanSwim()
+    public void EnterWater()
     {
-        return canSwim;
-    }
-
-    public void SetInWater(bool inWater)
-    {
-        isInWater = inWater;
-        m_animator.SetBool("InWater", inWater);
-
-        if (inWater)
+        if (!canSwim)
         {
-            // Adjust physics for water
-            m_body2d.gravityScale = 0.5f;
-            m_speed = swimSpeed;
-            m_jumpForce = swimJumpForce;
+            DieAndRespawn();
+            return;
         }
-        else
-        {
-            // Reset to normal physics
-            m_body2d.gravityScale = 1f;
-            m_speed = originalSpeed;
-            m_jumpForce = originalJumpForce;
-        }
-    }
-    public void EnterWater(WaterZone waterZone)
-    {
-        if (!canSwim) return;
 
         isInWater = true;
-        currentWaterZone = waterZone;
-
-        // Save original physics values
-        originalDrag = m_body2d.drag;
-        originalAngularDrag = m_body2d.angularDrag;
-        originalGravityScale = m_body2d.gravityScale;
-
-        // Apply water physics
-        m_body2d.drag = waterZone.GetWaterDrag();
-        m_body2d.angularDrag = waterZone.GetWaterAngularDrag();
-        m_body2d.gravityScale = waterZone.GetSwimGravityScale();
-
-        m_animator.SetBool("InWater", true);
+        m_body2d.gravityScale = originalGravity * 0.2f;
+        m_body2d.drag = 5f;
     }
 
     public void ExitWater()
     {
-        if (!isInWater) return;
-
         isInWater = false;
-        currentWaterZone = null;
-
-        // Restore original physics
-        m_body2d.drag = originalDrag;
-        m_body2d.angularDrag = originalAngularDrag;
-        m_body2d.gravityScale = originalGravityScale;
-
-        m_animator.SetBool("InWater", false);
+        m_body2d.gravityScale = originalGravity;
+        m_body2d.drag = 0f;
     }
-
+    public void EnableSwimming()
+    {
+        canSwim = true;
+    }
 }

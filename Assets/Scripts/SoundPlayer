@@ -1,0 +1,41 @@
+using UnityEngine;
+
+public class SoundPlayer : MonoBehaviour
+{
+    [Header("Player Sounds")]
+    public AudioClip jumpSound;
+    public AudioClip landSound;
+    public AudioClip damageSound;
+    
+    [Header("Coin Sounds")]
+    public AudioClip coinCollectSound;
+    
+    [Header("Rock Sounds")]
+    public AudioClip magicRock;
+    
+    private AudioSource audioSource;
+
+    void Start()
+    {
+        audioSource = GetComponent<AudioSource>();
+    }
+
+    // ===== PLAYER SOUNDS =====
+    public void PlayJumpSound() => PlaySound(jumpSound);
+    public void PlayLandSound() => PlaySound(landSound);
+    public void PlayDamageSound() => PlaySound(damageSound);
+
+    // ===== COIN SOUNDS =====
+    public void PlayCoinCollect() => PlaySound(coinCollectSound);
+    // rock
+    public void PlayMagicRock() => PlaySound(magicRock);
+
+    // ===== CORE PLAY METHOD =====
+    private void PlaySound(AudioClip clip)
+    {
+        if (clip != null)
+        {
+            audioSource.PlayOneShot(clip);
+        }
+    }
+}

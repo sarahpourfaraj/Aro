@@ -1,16 +1,12 @@
 using UnityEngine;
-using System.Collections;
 
 public class EnemySkeleton : MonoBehaviour
 {
     [Header("Combat Settings")]
-    [SerializeField] private int maxHealth = 2; // Dies after 2 hits now
-    [SerializeField] private float whiteFlashDuration = 3f; // Longer white flash
-    [SerializeField] private float redFlashDuration = 6f; // Longer red flash
-    [SerializeField] private Color hitColor = Color.white;
-    [SerializeField] private Color deathColor = Color.red;
+    [SerializeField] private int maxHealth = 2;
     [SerializeField] private GameObject spikesObstacle;
     [SerializeField] private float knockbackForce = 5f;
+    [SerializeField] private float damageCooldown = 1f;
 
     [Header("Movement Settings")]
     public float moveSpeed = 3f;
@@ -18,22 +14,23 @@ public class EnemySkeleton : MonoBehaviour
     public float reachThreshold = 0.1f;
 
     private int currentHealth;
-    private SpriteRenderer spriteRenderer;
-    private Color originalColor;
     private int currentWaypointIndex = 0;
+    private float lastDamageTime;
     
     private Vector2[] outwardDirections = {
-        Vector2.down,    // Moving right
-        Vector2.left,    // Moving down
-        Vector2.up,      // Moving left
-        Vector2.right    // Moving up
+        Vector2.down, Vector2.left, Vector2.up, Vector2.right
     };
 
     void Start()
     {
         currentHealth = maxHealth;
-        spriteRenderer = GetComponent<SpriteRenderer>();
-        originalColor = spriteRenderer.color;
+        lastDamageTime = -damageCooldown;
+
+        // Make sure spikes are active at start
+        if (spikesObstacle != null)
+        {
+            spikesObstacle.SetActive(true);
+        }
     }
 
     void Update()
@@ -44,40 +41,35 @@ public class EnemySkeleton : MonoBehaviour
     public void TakeDamage()
     {
         currentHealth--;
-        
-        // Always flash white when hit
-        StopAllCoroutines();
-        StartCoroutine(FlashEffect(hitColor, whiteFlashDuration));
 
         if (currentHealth <= 0)
         {
-            // Flash red right before death
-            StartCoroutine(DeathEffect());
+            Die();
         }
     }
 
-    private IEnumerator FlashEffect(Color flashColor, float duration)
+    private void Die()
     {
-        spriteRenderer.color = flashColor;
-        yield return new WaitForSeconds(duration);
-        spriteRenderer.color = originalColor;
-    }
-
-    private IEnumerator DeathEffect()
-    {
-        // First flash white (final hit)
-        spriteRenderer.color = hitColor;
-        yield return new WaitForSeconds(whiteFlashDuration);
-        spriteRenderer.color = originalColor;
-        
-        // Then flash red before dying
-        spriteRenderer.color = deathColor;
-        yield return new WaitForSeconds(redFlashDuration);
-        
+        // Disable spikes when enemy dies
         if (spikesObstacle != null)
         {
             spikesObstacle.SetActive(false);
+            
+            // Also disable the DeathObstacle component if it exists
+            DeathObstacle deathObstacle = spikesObstacle.GetComponent<DeathObstacle>();
+            if (deathObstacle != null)
+            {
+                deathObstacle.enabled = false;
+            }
+            
+            // Disable collider if it exists
+            Collider2D spikeCollider = spikesObstacle.GetComponent<Collider2D>();
+            if (spikeCollider != null)
+            {
+                spikeCollider.enabled = false;
+            }
         }
+        
         Destroy(gameObject);
     }
 
@@ -106,15 +98,30 @@ public class EnemySkeleton : MonoBehaviour
 
     void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.gameObject.CompareTag("Player"))
+        if (collision.gameObject.CompareTag("Player") && Time.time > lastDamageTime + damageCooldown)
         {
-            Bandit player = collision.gameObject.GetComponent<Bandit>();
-            if (player != null)
-            {
-                player.TakeDamage();
-                Vector2 knockbackDir = (player.transform.position - transform.position).normalized;
-                player.GetComponent<Rigidbody2D>().AddForce(knockbackDir * knockbackForce, ForceMode2D.Impulse);
-            }
+            lastDamageTime = Time.time;
+            HurtPlayer(collision.gameObject);
+        }
+    }
+
+    private void HurtPlayer(GameObject player)
+    {
+        Bandit playerScript = player.GetComponent<Bandit>();
+        if (playerScript != null)
+        {
+            playerScript.m_animator.SetTrigger("Hurt");
+            ApplyKnockback(player);
+        }
+    }
+
+    private void ApplyKnockback(GameObject player)
+    {
+        Rigidbody2D playerRb = player.GetComponent<Rigidbody2D>();
+        if (playerRb != null)
+        {
+            Vector2 knockbackDir = (player.transform.position - transform.position).normalized;
+            playerRb.AddForce(knockbackDir * knockbackForce, ForceMode2D.Impulse);
         }
     }
 
@@ -137,7 +144,6 @@ public class EnemySkeleton : MonoBehaviour
                 {
                     Gizmos.DrawSphere(waypoints[i].position, 0.2f);
                     Gizmos.DrawLine(waypoints[i].position, waypoints[(i + 1) % 4].position);
-                    
                     Gizmos.color = Color.red;
                     Gizmos.DrawRay(waypoints[i].position, outwardDirections[i] * 0.5f);
                     Gizmos.color = Color.cyan;
