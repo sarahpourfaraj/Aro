@@ -3,13 +3,20 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class Diamond : MonoBehaviour {
-    [SerializeField] private GameObject collectedEffect;
+        private Collider2D diamondCollider;
 
-    private void OnTriggerEnter2D(Collider2D other) {
-        if (other.CompareTag("Player")) {
-            Instantiate(collectedEffect, transform.position, Quaternion.identity);
-            Destroy(gameObject);
-            // Add score/win logic here
+    void Start()
+    {
+        diamondCollider = GetComponent<Collider2D>();
+        
+        if (diamondCollider == null)
+        {
+            diamondCollider = gameObject.AddComponent<BoxCollider2D>();
+            diamondCollider.isTrigger = true;
+        }
+        else
+        {
+            diamondCollider.isTrigger = true;
         }
     }
 }

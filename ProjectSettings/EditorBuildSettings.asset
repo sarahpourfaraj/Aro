@@ -5,7 +5,16 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/SampleScene.unity
     guid: 2cda990e2423bbf4892e6590ba056729
+  - enabled: 1
+    path: Assets/Scenes/Gray Castle.unity
+    guid: 25f37d55c946fc44fa58dcecfc561940
+  - enabled: 1
+    path: Assets/Scenes/Green Forest.unity
+    guid: 4d12d0f4608582c47b0733804a9cde5b
+  - enabled: 1
+    path: Assets/Scenes/Gold City.unity
+    guid: 63edbf113c8f94b409b5aa077126670e
   m_configObjects: {}
